@@ -9,7 +9,6 @@
         .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
         .hidden { display: none; }
         
-        /* 최종 수정 시각 스타일 */
         .last-updated { position: absolute; top: 15px; right: 20px; font-size: 0.75rem; color: #aaa; }
 
         .notice-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; font-size: 0.9rem; color: #666; line-height: 1.5; }
@@ -48,7 +47,7 @@
 
 <div class="container">
     <div id="screen-main">
-        <div class="last-updated">최종 수정 시각: 2026. 2. 22. 12:56</div>
+        <div class="last-updated" id="last-updated">최종 수정 시각: 2026. 2. 22. 01:03</div>
         <h1>효과 보고 유희왕 카드 맞추기</h1>
         <div class="notice-box">
             <span class="notice-title">[공지]</span>
@@ -110,17 +109,11 @@
     let correctCount = 0, wrongCount = 0, currentCard = null, userLogs = [];
 
     function scrollToTop() {
-        setTimeout(() => {
-            window.scrollTo(0, 0);
-            document.documentElement.scrollTop = 0;
-        }, 10);
+        setTimeout(() => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; }, 10);
     }
 
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            const screenMain = document.getElementById('screen-main');
-            if (!screenMain.classList.contains('hidden')) startQuiz();
-        }
+        if (e.key === 'Enter' && !document.getElementById('screen-main').classList.contains('hidden')) startQuiz();
     });
 
     function cleanEffectText(text) {
@@ -128,16 +121,21 @@
         return text.replace(/\[\s*Pendulum Effect\s*\]/gi, "【 펜듈럼 효과 】").replace(/\[\s*Monster Effect\s*\]/gi, "【 몬스터 효과 】");
     }
 
+    function normalizeName(name) {
+        return name.toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z가-힣0-9]/g, '');
+    }
+
+    function normalizeEffect(text) {
+        if (!text) return "";
+        return text.replace(/\[\s*Pendulum Effect\s*\]/gi, "").replace(/\[\s*Monster Effect\s*\]/gi, "").replace(/"[^"]*"/g, "").replace(/[^a-z가-힣0-9]/gi, "").replace(/\s+/g, "");
+    }
+
     async function loadCardData() {
         try {
             const response = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?language=ko');
             const data = await response.json();
             allCards = data.data;
-        } catch (e) { alert("데이터를 불러오지 못했습니다."); }
-    }
-
-    function normalizeName(name) {
-        return name.toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z가-힣0-9]/g, '');
+        } catch (e) { alert("데이터 로딩 실패"); }
     }
 
     async function startQuiz() {
@@ -147,31 +145,17 @@
             await loadCardData();
             btn.innerText = "문제 풀기 (Enter)";
         }
-        
-        totalToPlay = parseInt(document.getElementById('quiz-count').value);
-        if (isNaN(totalToPlay) || totalToPlay <= 0) return alert("숫자를 입력해주세요.");
-
-        const filteredCards = allCards.filter(card => {
-            const isMonster = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
-            const isSpellOrTrap = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
-            return isMonster || isSpellOrTrap;
+        totalToPlay = parseInt(document.getElementById('quiz-count').value) || 20;
+        const filtered = allCards.filter(card => {
+            const isM = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
+            const isST = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
+            return isM || isST;
         });
-
-        quizPool = [...filteredCards].sort(() => Math.random() - 0.5).slice(0, totalToPlay);
+        quizPool = filtered.sort(() => Math.random() - 0.5).slice(0, totalToPlay);
         currentIdx = 0; correctCount = 0; wrongCount = 0; userLogs = [];
-        
         const input = document.getElementById('user-input');
         input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
         showQuestion();
-    }
-
-    function updateStatusUI() {
-        document.getElementById('stat-correct').innerText = correctCount;
-        document.getElementById('stat-wrong').innerText = wrongCount;
-        document.getElementById('stat-remain').innerText = totalToPlay - currentIdx;
-        const cW = (correctCount / totalToPlay) * 100, wW = (wrongCount / totalToPlay) * 100;
-        document.getElementById('bar-correct').style.width = cW + "%";
-        document.getElementById('bar-wrong').style.width = wW + "%";
     }
 
     function showQuestion() {
@@ -180,13 +164,11 @@
         document.getElementById('screen-main').classList.add('hidden');
         document.getElementById('screen-answer').classList.add('hidden');
         document.getElementById('screen-quiz').classList.remove('hidden');
-
         if (debugMode === 1) {
-            const debugEl = document.getElementById('debug-info');
-            debugEl.classList.remove('hidden');
-            debugEl.innerText = `[DEBUG] URL: https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(currentCard.name)}&language=ko`;
+            const dbg = document.getElementById('debug-info');
+            dbg.classList.remove('hidden');
+            dbg.innerText = `[DEBUG] URL: https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(currentCard.name)}&language=ko`;
         }
-
         updateStatusUI();
         let cleaned = cleanEffectText(currentCard.desc);
         document.getElementById('display-effect').innerHTML = cleaned.replace(/"[^"]*"/g, '"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"');
@@ -194,66 +176,45 @@
         document.getElementById('user-input').focus();
     }
 
-function normalizeEffect(text) {
-    if (!text) return "";
-    return text
-        .replace(/\[\s*Pendulum Effect\s*\]/gi, "")
-        .replace(/\[\s*Monster Effect\s*\]/gi, "")
-        .replace(/"[^"]*"/g, "") // 따옴표 안의 내용(명칭 등)도 제외하고 비교할지 여부 결정 (일단 제거)
-        .replace(/[^a-z가-힣0-9]/gi, "") // 한글, 영문, 숫자만 남기기
-        .replace(/\s+/g, ""); // 모든 공백 제거
-}
-
-function checkAnswer() {
-    const userInput = document.getElementById('user-input').value;
-    const normalizedUser = normalizeName(userInput);
-    const normalizedTarget = normalizeName(currentCard.name);
-    
-    let isCorrect = false;
-
-    // 1. 직접적인 이름 일치 확인
-    if (normalizedUser === normalizedTarget) {
-        isCorrect = true;
-    } 
-    // 2. 이름이 다를 경우, 동일 효과 카드인지 확인
-    else if (userInput.trim() !== "") {
-        // 전체 DB에서 유저가 입력한 이름과 일치하는 카드를 검색
-        const userCard = allCards.find(card => normalizeName(card.name) === normalizedUser);
-        
-        if (userCard) {
-            const effectA = normalizeEffect(currentCard.desc);
-            const effectB = normalizeEffect(userCard.desc);
-            
-            // 효과 텍스트 정규화 결과가 완벽히 일치한다면 정답 인정
-            if (effectA === effectB && effectA !== "") {
-                isCorrect = true;
-            }
-        }
+    function updateStatusUI() {
+        document.getElementById('stat-correct').innerText = correctCount;
+        document.getElementById('stat-wrong').innerText = wrongCount;
+        document.getElementById('stat-remain').innerText = totalToPlay - currentIdx;
+        document.getElementById('bar-correct').style.width = (correctCount/totalToPlay)*100 + "%";
+        document.getElementById('bar-wrong').style.width = (wrongCount/totalToPlay)*100 + "%";
     }
 
-    if (isCorrect) correctCount++; else wrongCount++;
+    function checkAnswer() {
+        const userInput = document.getElementById('user-input').value;
+        const normUser = normalizeName(userInput);
+        const normTarget = normalizeName(currentCard.name);
+        
+        let isCorrect = false;
+        let matchedCard = currentCard; // 기본적으로 출제 카드를 보여줌
 
-    userLogs.push({
-        name: currentCard.name,
-        desc: currentCard.desc,
-        img: currentCard.card_images[0].image_url,
-        isCorrect: isCorrect,
-        userAnswer: userInput || "(미입력)"
-    });
+        if (normUser === normTarget) {
+            isCorrect = true;
+        } else if (userInput.trim() !== "") {
+            const userCard = allCards.find(c => normalizeName(c.name) === normUser);
+            if (userCard && normalizeEffect(userCard.desc) === normalizeEffect(currentCard.desc)) {
+                isCorrect = true;
+                matchedCard = userCard; // 효과가 같으면 유저가 입력한 카드를 보여줌
+            }
+        }
 
-    showIndividualResult(isCorrect, userInput);
-}
+        if (isCorrect) correctCount++; else wrongCount++;
+        userLogs.push({ name: matchedCard.name, desc: matchedCard.desc, img: matchedCard.card_images[0].image_url, isCorrect, userAnswer: userInput || "(미입력)" });
+        showIndividualResult(isCorrect, userInput, matchedCard);
+    }
 
-    function showIndividualResult(isCorrect, userInput) {
+    function showIndividualResult(isCorrect, userInput, matchedCard) {
         scrollToTop();
         document.getElementById('screen-quiz').classList.add('hidden');
         document.getElementById('screen-answer').classList.remove('hidden');
-
-        document.getElementById('origin-card-name').innerText = currentCard.name;
-        document.getElementById('card-image').src = currentCard.card_images[0].image_url;
+        document.getElementById('origin-card-name').innerText = matchedCard.name;
+        document.getElementById('card-image').src = matchedCard.img || matchedCard.card_images[0].image_url;
         document.getElementById('user-typed-text').innerText = userInput || "(미입력)";
-        document.getElementById('origin-effect').innerText = cleanEffectText(currentCard.desc);
-        
+        document.getElementById('origin-effect').innerText = cleanEffectText(matchedCard.desc);
         const jEl = document.getElementById('judgment-text');
         jEl.innerText = isCorrect ? "정답!" : "오답...";
         jEl.className = `judgment ${isCorrect ? 'text-correct' : 'text-wrong'}`;
@@ -270,27 +231,19 @@ function checkAnswer() {
         scrollToTop();
         document.getElementById('screen-answer').classList.add('hidden');
         document.getElementById('screen-final').classList.remove('hidden');
-
-        const percent = Math.round((correctCount / totalToPlay) * 100);
-        document.getElementById('final-score').innerText = `${totalToPlay} 중 ${correctCount} 성공 (${percent}%)`;
-
-        const summaryContent = document.getElementById('summary-content');
-        summaryContent.innerHTML = ""; 
-        userLogs.forEach((log, index) => {
+        document.getElementById('final-score').innerText = `${totalToPlay} 중 ${correctCount} 성공 (${Math.round((correctCount/totalToPlay)*100)}%)`;
+        const content = document.getElementById('summary-content');
+        content.innerHTML = "";
+        userLogs.forEach((log, idx) => {
             const item = document.createElement('div');
             item.className = 'summary-item';
-            item.innerHTML = `
-                <h4>[${index + 1}] ${log.name} (${log.isCorrect ? '<span class="text-correct">정답</span>' : '<span class="text-wrong">오답</span>'})</h4>
-                <div class="summary-typed">내가 쓴 답: <b>${log.userAnswer}</b></div>
-                <div class="effect-text" style="font-size: 0.9rem; max-height: 150px;">${cleanEffectText(log.desc)}</div>
-            `;
-            summaryContent.appendChild(item);
+            item.innerHTML = `<h4>[${idx+1}] ${log.name} (${log.isCorrect ? '<span class="text-correct">정답</span>' : '<span class="text-wrong">오답</span>'})</h4><div class="summary-typed">내가 쓴 답: <b>${log.userAnswer}</b></div><div class="effect-text" style="font-size:0.9rem; max-height:150px;">${cleanEffectText(log.desc)}</div>`;
+            content.appendChild(item);
         });
         document.querySelector('#screen-final button').focus();
     }
-</script>
 
+    window.onload = fetchLastUpdated;
+</script>
 </body>
 </html>
-
-
