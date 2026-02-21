@@ -176,6 +176,7 @@
     }
 
     function showQuestion() {
+        window.scrollTo(0, 0);
         currentCard = quizPool[currentIdx];
         document.getElementById('screen-main').classList.add('hidden');
         document.getElementById('screen-answer').classList.add('hidden');
@@ -216,6 +217,7 @@
     }
 
     function showIndividualResult(isCorrect) {
+        window.scrollTo(0, 0);
         document.getElementById('screen-quiz').classList.add('hidden');
         document.getElementById('screen-answer').classList.remove('hidden');
 
@@ -246,6 +248,7 @@
     }
 
     function showFinalResult() {
+        window.scrollTo(0, 0);
         document.getElementById('screen-answer').classList.add('hidden');
         document.getElementById('screen-final').classList.remove('hidden');
 
@@ -278,4 +281,5 @@ window.addEventListener('keydown', (e) => {
 </script>
 
 </body>
+
 </html>
