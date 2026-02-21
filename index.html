@@ -158,30 +158,49 @@
         return name.replace(/\([^)]*\)/g, '').replace(/[^a-zA-Z가-힣0-9]/g, '');
     }
 
-    async function startQuiz() {
-        if (allCards.length === 0) {
-            const btn = document.querySelector('#screen-main button');
-            const originalText = btn.innerText;
-            btn.innerText = "데이터 로딩 중...";
-            await loadCardData();
-            btn.innerText = originalText;
-        }
-        
-        totalToPlay = parseInt(document.getElementById('quiz-count').value);
-        if (isNaN(totalToPlay) || totalToPlay <= 0) return alert("숫자를 입력해주세요.");
-
-        quizPool = [...allCards].sort(() => Math.random() - 0.5).slice(0, totalToPlay);
-        
-        currentIdx = 0;
-        correctCount = 0;
-        wrongCount = 0;
-        userLogs = [];
-        
-        const input = document.getElementById('user-input');
-        input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
-
-        showQuestion();
+async function startQuiz() {
+    if (allCards.length === 0) {
+        const btn = document.querySelector('#screen-main button');
+        const originalText = btn.innerText;
+        btn.innerText = "데이터 로딩 중...";
+        await loadCardData();
+        btn.innerText = originalText;
     }
+    
+    totalToPlay = parseInt(document.getElementById('quiz-count').value);
+    if (isNaN(totalToPlay) || totalToPlay <= 0) return alert("숫자를 입력해주세요.");
+
+    // --- 1. 필터링 로직 추가 ---
+    const filteredCards = allCards.filter(card => {
+        // typeline이 존재하고 "Effect" 또는 "Normal"을 포함하는 경우 (몬스터)
+        const isMonster = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
+        
+        // type에 "Spell" 또는 "Trap"이 포함된 경우 (마법/함정)
+        const isSpellOrTrap = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
+        
+        return isMonster || isSpellOrTrap;
+    });
+
+    // 필터링된 결과가 요청한 문제 수보다 적을 경우를 대비
+    if (filteredCards.length < totalToPlay) {
+        alert(`조건에 맞는 카드가 ${filteredCards.length}장뿐입니다. 모든 카드를 대상으로 퀴즈를 진행합니다.`);
+        quizPool = [...filteredCards].sort(() => Math.random() - 0.5);
+        totalToPlay = filteredCards.length;
+    } else {
+        // --- 2. 필터링된 카드 풀에서 랜덤하게 문제 추출 ---
+        quizPool = [...filteredCards].sort(() => Math.random() - 0.5).slice(0, totalToPlay);
+    }
+    
+    currentIdx = 0;
+    correctCount = 0;
+    wrongCount = 0;
+    userLogs = [];
+    
+    const input = document.getElementById('user-input');
+    input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
+
+    showQuestion();
+}
 
     function updateStatusUI() {
         document.getElementById('stat-correct').innerText = correctCount;
@@ -291,3 +310,4 @@
 
 </body>
 </html>
+
