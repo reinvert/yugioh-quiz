@@ -194,21 +194,55 @@
         document.getElementById('user-input').focus();
     }
 
-    function checkAnswer() {
-        const userInput = document.getElementById('user-input').value;
-        const isCorrect = normalizeName(userInput) === normalizeName(currentCard.name);
-        if (isCorrect) correctCount++; else wrongCount++;
+function normalizeEffect(text) {
+    if (!text) return "";
+    return text
+        .replace(/\[\s*Pendulum Effect\s*\]/gi, "")
+        .replace(/\[\s*Monster Effect\s*\]/gi, "")
+        .replace(/"[^"]*"/g, "") // 따옴표 안의 내용(명칭 등)도 제외하고 비교할지 여부 결정 (일단 제거)
+        .replace(/[^a-z가-힣0-9]/gi, "") // 한글, 영문, 숫자만 남기기
+        .replace(/\s+/g, ""); // 모든 공백 제거
+}
 
-        userLogs.push({
-            name: currentCard.name,
-            desc: currentCard.desc,
-            img: currentCard.card_images[0].image_url,
-            isCorrect: isCorrect,
-            userAnswer: userInput || "(미입력)"
-        });
+function checkAnswer() {
+    const userInput = document.getElementById('user-input').value;
+    const normalizedUser = normalizeName(userInput);
+    const normalizedTarget = normalizeName(currentCard.name);
+    
+    let isCorrect = false;
 
-        showIndividualResult(isCorrect, userInput);
+    // 1. 직접적인 이름 일치 확인
+    if (normalizedUser === normalizedTarget) {
+        isCorrect = true;
+    } 
+    // 2. 이름이 다를 경우, 동일 효과 카드인지 확인
+    else if (userInput.trim() !== "") {
+        // 전체 DB에서 유저가 입력한 이름과 일치하는 카드를 검색
+        const userCard = allCards.find(card => normalizeName(card.name) === normalizedUser);
+        
+        if (userCard) {
+            const effectA = normalizeEffect(currentCard.desc);
+            const effectB = normalizeEffect(userCard.desc);
+            
+            // 효과 텍스트 정규화 결과가 완벽히 일치한다면 정답 인정
+            if (effectA === effectB && effectA !== "") {
+                isCorrect = true;
+            }
+        }
     }
+
+    if (isCorrect) correctCount++; else wrongCount++;
+
+    userLogs.push({
+        name: currentCard.name,
+        desc: currentCard.desc,
+        img: currentCard.card_images[0].image_url,
+        isCorrect: isCorrect,
+        userAnswer: userInput || "(미입력)"
+    });
+
+    showIndividualResult(isCorrect, userInput);
+}
 
     function showIndividualResult(isCorrect, userInput) {
         scrollToTop();
@@ -258,3 +292,4 @@
 
 </body>
 </html>
+
