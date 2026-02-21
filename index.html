@@ -47,7 +47,7 @@
 
 <div class="container">
     <div id="screen-main">
-        <div class="last-updated" id="last-updated">최종 수정 시각: 2026. 2. 22. 01:03</div>
+        <div class="last-updated" id="last-updated">최종 수정 시각: 2026. 2. 22. 01:28</div>
         <h1>효과 보고 유희왕 카드 맞추기</h1>
         <div class="notice-box">
             <span class="notice-title">[공지]</span>
@@ -139,24 +139,66 @@
     }
 
     async function startQuiz() {
-        if (allCards.length === 0) {
-            const btn = document.querySelector('#screen-main button');
-            btn.innerText = "데이터 로딩 중...";
-            await loadCardData();
-            btn.innerText = "문제 풀기 (Enter)";
-        }
-        totalToPlay = parseInt(document.getElementById('quiz-count').value) || 20;
-        const filtered = allCards.filter(card => {
-            const isM = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
-            const isST = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
-            return isM || isST;
-        });
-        quizPool = filtered.sort(() => Math.random() - 0.5).slice(0, totalToPlay);
-        currentIdx = 0; correctCount = 0; wrongCount = 0; userLogs = [];
-        const input = document.getElementById('user-input');
-        input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
-        showQuestion();
+    // 1. 데이터 로딩 확인
+    if (allCards.length === 0) {
+        const btn = document.querySelector('#screen-main button');
+        const originalText = btn.innerText;
+        btn.innerText = "데이터 로딩 중...";
+        await loadCardData();
+        btn.innerText = "문제 풀기 (Enter)";
     }
+    
+    // 2. 문항 수 설정
+    totalToPlay = parseInt(document.getElementById('quiz-count').value) || 20;
+
+    // 3. 카드 필터링 (Monster, Spell, Trap만 추출)
+    const filteredCards = allCards.filter(card => {
+        const isMonster = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
+        const isSpellOrTrap = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
+        return isMonster || isSpellOrTrap;
+    });
+
+    // --- 고품질 셔플 로직 시작 (Fisher-Yates + Web Crypto API) ---
+    const secureShuffle = (array) => {
+        const crypto = window.crypto || window.msCrypto;
+        const shuffled = [...array]; // 원본 배열 복사
+        
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            // 암호화 수준의 32비트 무부호 정수 생성
+            const randomBuffer = new Uint32Array(1);
+            crypto.getRandomValues(randomBuffer);
+            
+            // i+1 범위 내에서 편향 없는 인덱스 선택
+            const j = randomBuffer[0] % (i + 1);
+            
+            // 요소 맞바꾸기 (Destructuring assignment)
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+    // --- 셔플 로직 끝 ---
+
+    // 4. 고품질로 섞인 카드 풀 생성
+    const shuffledPool = secureShuffle(filteredCards);
+    quizPool = shuffledPool.slice(0, totalToPlay);
+    
+    // 필터링된 카드가 요청 수보다 적을 경우 예외 처리
+    if (quizPool.length < totalToPlay) {
+        totalToPlay = quizPool.length;
+    }
+
+    // 5. 게임 상태 초기화
+    currentIdx = 0;
+    correctCount = 0;
+    wrongCount = 0;
+    userLogs = [];
+    
+    // 6. 이벤트 및 UI 세팅
+    const input = document.getElementById('user-input');
+    input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
+    
+    showQuestion();
+}
 
     function showQuestion() {
         scrollToTop();
@@ -247,3 +289,4 @@
 </script>
 </body>
 </html>
+
