@@ -9,6 +9,9 @@
         .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
         .hidden { display: none; }
         
+        /* 최종 수정 시각 스타일 */
+        .last-updated { position: absolute; top: 15px; right: 20px; font-size: 0.75rem; color: #aaa; }
+
         .notice-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; font-size: 0.9rem; color: #666; line-height: 1.5; }
         .notice-title { font-weight: bold; color: #d9534f; display: block; margin-bottom: 5px; }
         .guide-text { font-size: 0.85rem; color: #888; margin-bottom: 25px; word-break: keep-all; }
@@ -45,6 +48,7 @@
 
 <div class="container">
     <div id="screen-main">
+        <div class="last-updated">최종 수정 시각: 2026. 2. 22. 12:46</div>
         <h1>효과 보고 유희왕 카드 맞추기</h1>
         <div class="notice-box">
             <span class="notice-title">[공지]</span>
@@ -63,8 +67,8 @@
         <div id="debug-info" class="hidden"></div>
         <div class="status-header">
             <div>
-                <span class="text-correct">맞춤: <span id="stat-correct">0</span></span> / 
-                <span class="text-wrong">틀림: <span id="stat-wrong">0</span></span>
+                <span class="text-correct">정답: <span id="stat-correct">0</span></span> / 
+                <span class="text-wrong">오답: <span id="stat-wrong">0</span></span>
             </div>
             <div class="text-remain">남은 문제: <span id="stat-remain">0</span></div>
         </div>
@@ -105,7 +109,6 @@
     let allCards = [], quizPool = [], currentIdx = 0, totalToPlay = 0;
     let correctCount = 0, wrongCount = 0, currentCard = null, userLogs = [];
 
-    // 스크롤을 확실하게 위로 올리는 헬퍼 함수
     function scrollToTop() {
         setTimeout(() => {
             window.scrollTo(0, 0);
@@ -201,7 +204,7 @@
             desc: currentCard.desc,
             img: currentCard.card_images[0].image_url,
             isCorrect: isCorrect,
-            userAnswer: userInput || "(미입력)" // 유저가 입력한 답 저장
+            userAnswer: userInput || "(미입력)"
         });
 
         showIndividualResult(isCorrect, userInput);
