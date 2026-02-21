@@ -9,25 +9,9 @@
         .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
         .hidden { display: none; }
         
-        .notice-box {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px; /* 안내문과의 간격을 위해 조정 */
-            font-size: 0.9rem;
-            color: #666;
-            line-height: 1.5;
-        }
+        .notice-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; font-size: 0.9rem; color: #666; line-height: 1.5; }
         .notice-title { font-weight: bold; color: #d9534f; display: block; margin-bottom: 5px; }
-
-        /* 안내문 스타일 */
-        .guide-text {
-            font-size: 0.85rem;
-            color: #888;
-            margin-bottom: 25px;
-            word-break: keep-all;
-        }
+        .guide-text { font-size: 0.85rem; color: #888; margin-bottom: 25px; word-break: keep-all; }
 
         #debug-info { background: #fff3cd; color: #856404; font-size: 0.8rem; padding: 10px; margin-bottom: 15px; border-radius: 5px; word-break: break-all; text-align: left; border: 1px solid #ffeeba; }
 
@@ -48,9 +32,13 @@
         .card-img { max-width: 220px; min-height: 320px; margin: 20px 0; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); background-color: #f9f9f9; }
         .effect-text { background: #fdfdfd; padding: 20px; text-align: left; border: 1px solid #eee; border-radius: 8px; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
 
-        .judgment { font-size: 1.8rem; font-weight: bold; margin: 15px 0; }
+        .judgment { font-size: 1.8rem; font-weight: bold; margin: 15px 0 5px 0; }
+        .user-typed-info { font-size: 1rem; color: #666; margin-bottom: 20px; }
+        .user-typed-info b { color: #333; }
+
         .summary-list { text-align: left; margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
         .summary-item { margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px dashed #ccc; }
+        .summary-typed { font-size: 0.9rem; color: #777; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -58,16 +46,13 @@
 <div class="container">
     <div id="screen-main">
         <h1>효과 보고 유희왕 카드 맞추기</h1>
-        
         <div class="notice-box">
             <span class="notice-title">[공지]</span>
             ygoprodecks api의 문제로 인해, 펜듈럼 효과는 영어로 표시됩니다. 양해 부탁드립니다.
         </div>
-
         <div class="guide-text">
-            정답 입력 시 영문, 한글, 숫자를 제외한 모든 공백, 특수문자 등은 입력하지 않아도 정답으로 인정됩니다.
+            정답 입력 시 알파벳 대소문자 구분은 없으며, 영문/한글/숫자를 제외한 모든 공백과 특수문자는 입력하지 않아도 정답으로 인정됩니다.
         </div>
-
         <p>문항 수를 입력하세요:</p>
         <input type="number" id="quiz-count" value="20" min="1">
         <br>
@@ -97,6 +82,7 @@
         <h2 id="origin-card-name"></h2>
         <img id="card-image" class="card-img" src="" alt="카드 이미지">
         <div id="judgment-text" class="judgment"></div>
+        <div id="user-typed-display" class="user-typed-info">입력한 답: <b id="user-typed-text"></b></div>
         <div id="origin-effect" class="effect-text"></div>
         <br>
         <button id="next-btn" onclick="nextQuestion()">다음 (Enter)</button>
@@ -116,31 +102,27 @@
 
 <script>
     const debugMode = 0; 
+    let allCards = [], quizPool = [], currentIdx = 0, totalToPlay = 0;
+    let correctCount = 0, wrongCount = 0, currentCard = null, userLogs = [];
 
-    let allCards = [];
-    let quizPool = [];
-    let currentIdx = 0;
-    let totalToPlay = 0;
-    let correctCount = 0;
-    let wrongCount = 0;
-    let currentCard = null;
-    let userLogs = [];
+    // 스크롤을 확실하게 위로 올리는 헬퍼 함수
+    function scrollToTop() {
+        setTimeout(() => {
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+        }, 10);
+    }
 
-    // 전역 엔터키 리스너
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const screenMain = document.getElementById('screen-main');
-            if (!screenMain.classList.contains('hidden')) {
-                startQuiz();
-            }
+            if (!screenMain.classList.contains('hidden')) startQuiz();
         }
     });
 
     function cleanEffectText(text) {
         if (!text) return "";
-        return text
-            .replace(/\[\s*Pendulum Effect\s*\]/gi, "【 펜듈럼 효과 】")
-            .replace(/\[\s*Monster Effect\s*\]/gi, "【 몬스터 효과 】");
+        return text.replace(/\[\s*Pendulum Effect\s*\]/gi, "【 펜듈럼 효과 】").replace(/\[\s*Monster Effect\s*\]/gi, "【 몬스터 효과 】");
     }
 
     async function loadCardData() {
@@ -148,148 +130,107 @@
             const response = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?language=ko');
             const data = await response.json();
             allCards = data.data;
-        } catch (e) {
-            alert("데이터를 불러오지 못했습니다.");
-        }
+        } catch (e) { alert("데이터를 불러오지 못했습니다."); }
     }
 
-    // 1. 수정사항: 정규표현식에 숫자(0-9) 추가
     function normalizeName(name) {
-    return name
-        .toLowerCase() // 1. 모든 영문을 소문자로 변환 (대소문자 구분 제거)
-        .replace(/\([^)]*\)/g, '') // 2. 괄호와 그 내용 제거
-        .replace(/[^a-z가-힣0-9]/g, ''); // 3. 소문자 영문, 한글, 숫자 외 제거
-}
-
-async function startQuiz() {
-    if (allCards.length === 0) {
-        const btn = document.querySelector('#screen-main button');
-        const originalText = btn.innerText;
-        btn.innerText = "데이터 로딩 중...";
-        await loadCardData();
-        btn.innerText = originalText;
+        return name.toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z가-힣0-9]/g, '');
     }
-    
-    totalToPlay = parseInt(document.getElementById('quiz-count').value);
-    if (isNaN(totalToPlay) || totalToPlay <= 0) return alert("숫자를 입력해주세요.");
 
-    // --- 1. 필터링 로직 추가 ---
-    const filteredCards = allCards.filter(card => {
-        // typeline이 존재하고 "Effect" 또는 "Normal"을 포함하는 경우 (몬스터)
-        const isMonster = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
+    async function startQuiz() {
+        if (allCards.length === 0) {
+            const btn = document.querySelector('#screen-main button');
+            btn.innerText = "데이터 로딩 중...";
+            await loadCardData();
+            btn.innerText = "문제 풀기 (Enter)";
+        }
         
-        // type에 "Spell" 또는 "Trap"이 포함된 경우 (마법/함정)
-        const isSpellOrTrap = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
-        
-        return isMonster || isSpellOrTrap;
-    });
+        totalToPlay = parseInt(document.getElementById('quiz-count').value);
+        if (isNaN(totalToPlay) || totalToPlay <= 0) return alert("숫자를 입력해주세요.");
 
-    // 필터링된 결과가 요청한 문제 수보다 적을 경우를 대비
-    if (filteredCards.length < totalToPlay) {
-        alert(`조건에 맞는 카드가 ${filteredCards.length}장뿐입니다. 모든 카드를 대상으로 퀴즈를 진행합니다.`);
-        quizPool = [...filteredCards].sort(() => Math.random() - 0.5);
-        totalToPlay = filteredCards.length;
-    } else {
-        // --- 2. 필터링된 카드 풀에서 랜덤하게 문제 추출 ---
+        const filteredCards = allCards.filter(card => {
+            const isMonster = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
+            const isSpellOrTrap = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
+            return isMonster || isSpellOrTrap;
+        });
+
         quizPool = [...filteredCards].sort(() => Math.random() - 0.5).slice(0, totalToPlay);
+        currentIdx = 0; correctCount = 0; wrongCount = 0; userLogs = [];
+        
+        const input = document.getElementById('user-input');
+        input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
+        showQuestion();
     }
-    
-    currentIdx = 0;
-    correctCount = 0;
-    wrongCount = 0;
-    userLogs = [];
-    
-    const input = document.getElementById('user-input');
-    input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
-
-    showQuestion();
-}
 
     function updateStatusUI() {
         document.getElementById('stat-correct').innerText = correctCount;
         document.getElementById('stat-wrong').innerText = wrongCount;
         document.getElementById('stat-remain').innerText = totalToPlay - currentIdx;
-
-        const correctWidth = (correctCount / totalToPlay) * 100;
-        const wrongWidth = (wrongCount / totalToPlay) * 100;
-        document.getElementById('bar-correct').style.width = correctWidth + "%";
-        document.getElementById('bar-wrong').style.width = wrongWidth + "%";
+        const cW = (correctCount / totalToPlay) * 100, wW = (wrongCount / totalToPlay) * 100;
+        document.getElementById('bar-correct').style.width = cW + "%";
+        document.getElementById('bar-wrong').style.width = wW + "%";
     }
 
     function showQuestion() {
-        window.scrollTo(0, 0); 
+        scrollToTop();
         currentCard = quizPool[currentIdx];
         document.getElementById('screen-main').classList.add('hidden');
         document.getElementById('screen-answer').classList.add('hidden');
         document.getElementById('screen-quiz').classList.remove('hidden');
 
-        const debugEl = document.getElementById('debug-info');
         if (debugMode === 1) {
+            const debugEl = document.getElementById('debug-info');
             debugEl.classList.remove('hidden');
-            debugEl.innerText = `[DEBUG] API URL: https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(currentCard.name)}&language=ko`;
+            debugEl.innerText = `[DEBUG] URL: https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(currentCard.name)}&language=ko`;
         }
 
         updateStatusUI();
-
-        let cleanedText = cleanEffectText(currentCard.desc);
-        const maskedEffect = cleanedText.replace(/"[^"]*"/g, '"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"');
-        
-        document.getElementById('display-effect').innerHTML = maskedEffect;
+        let cleaned = cleanEffectText(currentCard.desc);
+        document.getElementById('display-effect').innerHTML = cleaned.replace(/"[^"]*"/g, '"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"');
         document.getElementById('user-input').value = "";
         document.getElementById('user-input').focus();
     }
 
     function checkAnswer() {
         const userInput = document.getElementById('user-input').value;
-        const normalizedUser = normalizeName(userInput);
-        const normalizedTarget = normalizeName(currentCard.name);
-        const isCorrect = (normalizedUser === normalizedTarget);
-
+        const isCorrect = normalizeName(userInput) === normalizeName(currentCard.name);
         if (isCorrect) correctCount++; else wrongCount++;
 
         userLogs.push({
             name: currentCard.name,
             desc: currentCard.desc,
             img: currentCard.card_images[0].image_url,
-            isCorrect: isCorrect
+            isCorrect: isCorrect,
+            userAnswer: userInput || "(미입력)" // 유저가 입력한 답 저장
         });
 
-        showIndividualResult(isCorrect);
+        showIndividualResult(isCorrect, userInput);
     }
 
-    function showIndividualResult(isCorrect) {
-        window.scrollTo(0, 0); 
+    function showIndividualResult(isCorrect, userInput) {
+        scrollToTop();
         document.getElementById('screen-quiz').classList.add('hidden');
         document.getElementById('screen-answer').classList.remove('hidden');
 
         document.getElementById('origin-card-name').innerText = currentCard.name;
         document.getElementById('card-image').src = currentCard.card_images[0].image_url;
+        document.getElementById('user-typed-text').innerText = userInput || "(미입력)";
         document.getElementById('origin-effect').innerText = cleanEffectText(currentCard.desc);
         
-        const judgmentEl = document.getElementById('judgment-text');
-        judgmentEl.innerText = isCorrect ? "정답!" : "오답...";
-        judgmentEl.className = `judgment ${isCorrect ? 'text-correct' : 'text-wrong'}`;
-
+        const jEl = document.getElementById('judgment-text');
+        jEl.innerText = isCorrect ? "정답!" : "오답...";
+        jEl.className = `judgment ${isCorrect ? 'text-correct' : 'text-wrong'}`;
         document.getElementById('next-btn').focus();
     }
 
     function nextQuestion() {
-        const cardImg = document.getElementById('card-image');
-        cardImg.src = "";
-        document.getElementById('origin-card-name').innerText = "";
-        document.getElementById('origin-effect').innerText = "";
-        document.getElementById('judgment-text').innerText = "";
-
+        document.getElementById('card-image').src = "";
         currentIdx++;
-        if (currentIdx < totalToPlay) {
-            showQuestion();
-        } else {
-            showFinalResult();
-        }
+        if (currentIdx < totalToPlay) showQuestion(); else showFinalResult();
     }
 
     function showFinalResult() {
-        window.scrollTo(0, 0); 
+        scrollToTop();
         document.getElementById('screen-answer').classList.add('hidden');
         document.getElementById('screen-final').classList.remove('hidden');
 
@@ -302,7 +243,8 @@ async function startQuiz() {
             const item = document.createElement('div');
             item.className = 'summary-item';
             item.innerHTML = `
-                <h4>[${index + 1}] ${log.name} (${log.isCorrect ? '정답' : '오답'})</h4>
+                <h4>[${index + 1}] ${log.name} (${log.isCorrect ? '<span class="text-correct">정답</span>' : '<span class="text-wrong">오답</span>'})</h4>
+                <div class="summary-typed">내가 쓴 답: <b>${log.userAnswer}</b></div>
                 <div class="effect-text" style="font-size: 0.9rem; max-height: 150px;">${cleanEffectText(log.desc)}</div>
             `;
             summaryContent.appendChild(item);
@@ -313,5 +255,3 @@ async function startQuiz() {
 
 </body>
 </html>
-
-
