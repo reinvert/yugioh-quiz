@@ -139,7 +139,20 @@
 
     function translateTerm(text) {
         if (!text) return "정보 없음";
-        return text.split(/[\s/]+/).map(word => translationMap[word] || word).join(' / ');
+    
+        // 1. 전체 텍스트가 맵에 있는지 확인 (예: "Winged Beast", "Beast-Warrior")
+        if (translationMap[text]) return translationMap[text];
+    
+        // 2. 슬래시(/)를 기준으로 먼저 나눔 (API의 주요 구분자)
+        return text.split(/\s*\/\s*/).map(part => {
+            // 각 파트 자체가 맵에 있는지 확인 (예: "Winged Beast")
+            if (translationMap[part]) return translationMap[part];
+    
+            // 3. 그래도 없다면 공백으로 나눠서 개별 단어 번역 시도
+            return part.split(/\s+/).map(word => {
+                return translationMap[word] || word;
+            }).join(' ');
+        }).join(' / ');
     }
 
     async function fetchLastUpdated() {
@@ -363,3 +376,4 @@
 </script>
 </body>
 </html>
+
