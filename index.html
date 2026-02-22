@@ -8,36 +8,34 @@
         body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background: #f0f0f0; padding: 20px; color: #333; }
         .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
         .hidden { display: none; }
-        
         .last-updated { position: absolute; top: 15px; right: 20px; font-size: 0.75rem; color: #aaa; }
-
         .notice-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; font-size: 0.9rem; color: #666; line-height: 1.5; }
         .notice-title { font-weight: bold; color: #d9534f; display: block; margin-bottom: 5px; }
         .guide-text { font-size: 0.85rem; color: #888; margin-bottom: 25px; word-break: keep-all; }
-
-        #debug-info { background: #fff3cd; color: #856404; font-size: 0.8rem; padding: 10px; margin-bottom: 15px; border-radius: 5px; word-break: break-all; text-align: left; border: 1px solid #ffeeba; }
-
+        
+        /* 상태 헤더 색상 */
         .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; font-size: 1.1rem; }
         .text-correct { color: #28a745; }
+        .text-hint { color: #fbc02d; } /* 힌트 정답용 진한 노란색 */
         .text-wrong { color: #dc3545; }
         .text-remain { color: #333; }
 
+        /* 프로그레스 바 스타일 개선 */
         .progress-container { height: 20px; width: 100%; background-color: #e9ecef; border-radius: 10px; overflow: hidden; display: flex; margin-bottom: 25px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
         .progress-correct { background-color: #28a745; height: 100%; transition: width 0.3s ease; }
+        .progress-hint { background-color: #ffc107; height: 100%; transition: width 0.3s ease; }
         .progress-wrong { background-color: #dc3545; height: 100%; transition: width 0.3s ease; }
 
         input[type="text"], input[type="number"] { padding: 12px; width: 80%; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; text-align: center; }
-        button { padding: 10px 25px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: 0.3s; }
+        button { padding: 10px 25px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: 0.3s; margin: 5px; }
         button:hover { background: #0056b3; }
-        button:focus { outline: none; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5); }
-
+        .btn-hint { background: #6c757d; }
+        .btn-hint:hover { background: #5a6268; }
         .card-img { max-width: 220px; min-height: 320px; margin: 20px 0; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); background-color: #f9f9f9; }
         .effect-text { background: #fdfdfd; padding: 20px; text-align: left; border: 1px solid #eee; border-radius: 8px; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
-
+        .hint-content { background: #fffde7; padding: 15px; border: 1px dashed #fbc02d; border-radius: 8px; text-align: left; margin-bottom: 20px; font-size: 0.95rem; line-height: 1.6; }
         .judgment { font-size: 1.8rem; font-weight: bold; margin: 15px 0 5px 0; }
         .user-typed-info { font-size: 1rem; color: #666; margin-bottom: 20px; }
-        .user-typed-info b { color: #333; }
-
         .summary-list { text-align: left; margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
         .summary-item { margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px dashed #ccc; }
         .summary-typed { font-size: 0.9rem; color: #777; margin-bottom: 10px; }
@@ -47,7 +45,7 @@
 
 <div class="container">
     <div id="screen-main">
-        <div class="last-updated" id="last-updated">최종 수정 시각: 2026. 2. 22. 01:28</div>
+        <div class="last-updated" id="last-updated">최종 수정 시각: 로딩 중...</div>
         <h1>효과 보고 유희왕 카드 맞추기</h1>
         <div class="notice-box">
             <span class="notice-title">[공지]</span>
@@ -63,22 +61,25 @@
     </div>
 
     <div id="screen-quiz" class="hidden">
-        <div id="debug-info" class="hidden"></div>
         <div class="status-header">
             <div>
                 <span class="text-correct">정답: <span id="stat-correct">0</span></span> / 
+                <span class="text-hint">정답(힌트)오전 11:51 2026-02-22: <span id="stat-hint">0</span></span> / 
                 <span class="text-wrong">오답: <span id="stat-wrong">0</span></span>
             </div>
             <div class="text-remain">남은 문제: <span id="stat-remain">0</span></div>
         </div>
         <div class="progress-container">
             <div id="bar-correct" class="progress-correct" style="width: 0%"></div>
+            <div id="bar-hint" class="progress-hint" style="width: 0%"></div>
             <div id="bar-wrong" class="progress-wrong" style="width: 0%"></div>
         </div>
         <div id="display-effect" class="effect-text"></div>
+        <div id="hint-area" class="hint-content hidden"></div>
         <input type="text" id="user-input" placeholder="카드명을 입력하세요" autocomplete="off">
         <br>
         <button onclick="checkAnswer()">정답 확인</button>
+        <button id="hint-btn" class="btn-hint" onclick="showHint()">힌트 보기</button>
     </div>
 
     <div id="screen-answer" class="hidden">
@@ -106,7 +107,39 @@
 <script>
     const debugMode = 0; 
     let allCards = [], quizPool = [], currentIdx = 0, totalToPlay = 0;
-    let correctCount = 0, wrongCount = 0, currentCard = null, userLogs = [];
+    let correctCount = 0, hintCorrectCount = 0, wrongCount = 0; // 카운터 세분화
+    let currentCard = null, userLogs = [];
+    let usedHintThisTurn = false;
+
+    const translationMap = {
+        "DARK": "어둠", "LIGHT": "빛", "EARTH": "땅", "WATER": "물", "FIRE": "화염", "WIND": "바람", "DIVINE": "신",
+        "Trap": "함정", "Spell": "마법", "Monster": "몬스터", "Card": "카드",
+        "Equip": "장착", "Field": "필드", "Quick-Play": "속공", "Ritual": "의식", "Continuous": "지속", "Counter": "카운터", "Normal": "일반",
+        "Spellcaster": "마법사족", "Dragon": "드래곤족", "Zombie": "언데드족", "Beast-Warrior": "야수전사족", "Warrior": "전사족", "Winged Beast": "비행야수족",
+        "Beast": "야수족", "Fiend": "악마족", "Fairy": "천사족", "Insect": "곤충족", "Dinosaur": "공룡족", "Reptile": "파충류족", "Fish": "어류족",
+        "Sea Serpent": "해룡족", "Aqua": "물족", "Pyro": "화염족", "Thunder": "번개족", "Rock": "암석족", "Plant": "식물족", "Machine": "기계족",
+        "Psychic": "사이킥족", "Divine-Beast": "환신야수족", "Wyrm": "환룡족", "Cyberse": "사이버스족", "Illusion": "환상마족", "Creator God": "창조신족",
+        "Effect": "효과", "Fusion": "융합", "Synchro": "싱크로", "XYZ": "엑시즈", "Toon": "툰", "Spirit": "스피릿", "Union": "유니온", "Gemini": "듀얼",
+        "Tuner": "튜너", "Flip": "리버스", "Pendulum": "펜듈럼", "Link": "링크"
+    };
+
+    function translateTerm(text) {
+        if (!text) return "정보 없음";
+        return text.split(/[\s/]+/).map(word => translationMap[word] || word).join(' / ');
+    }
+
+    async function fetchLastUpdated() {
+        const owner = "reinvert"; 
+        const repo = "yugioh-quiz"; 
+        try {
+            const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?path=index.html&page=1&per_page=1`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                const date = new Date(data[0].commit.committer.date);
+                document.getElementById('last-updated').innerText = `최종 수정 시각: ${date.getFullYear()}. ${date.getMonth()+1}. ${date.getDate()}. ${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}`;
+            }
+        } catch (e) { document.getElementById('last-updated').innerText = "최종 수정 시각: 2026. 2. 22. 11:43"; }
+    }
 
     function scrollToTop() {
         setTimeout(() => { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; }, 10);
@@ -130,6 +163,47 @@
         return text.replace(/\[\s*Pendulum Effect\s*\]/gi, "").replace(/\[\s*Monster Effect\s*\]/gi, "").replace(/"[^"]*"/g, "").replace(/[^a-z가-힣0-9]/gi, "").replace(/\s+/g, "");
     }
 
+    function compareHintStats(cardA, cardB) {
+        if (cardA.type !== cardB.type || cardA.race !== cardB.race) return false;
+        if (cardA.type.toLowerCase().includes("monster")) {
+            if (cardA.attribute !== cardB.attribute) return false;
+            if (cardA.atk !== cardB.atk || cardA.def !== cardB.def) return false;
+            if (cardA.level !== cardB.level) return false;
+            if (cardA.rank !== cardB.rank) return false;
+            if (cardA.linkval !== cardB.linkval) return false;
+            if (cardA.scale !== cardB.scale) return false;
+        }
+        return true;
+    }
+
+    function showHint() {
+        if (!currentCard) return;
+        usedHintThisTurn = true;
+        const area = document.getElementById('hint-area');
+        area.classList.remove('hidden');
+
+        // Card 단어 제거 전처리 후 번역
+        let typeHint = translateTerm(currentCard.type.replace(/\s*Card\s*/gi, ""));
+        let raceHint = translateTerm(currentCard.race);
+        let attrHint = translateTerm(currentCard.attribute);
+        const isLink = currentCard.type.toLowerCase().includes("link");
+
+        let hintStr = `<b>분류:</b> ${typeHint} / ${raceHint}<br>`;
+        if (currentCard.type.toLowerCase().includes("monster")) {
+            let line2 = `<b>속성:</b> ${attrHint}`;
+            if (currentCard.level) line2 += ` / <b>레벨:</b> ${currentCard.level}`;
+            if (currentCard.rank) line2 += ` / <b>랭크:</b> ${currentCard.rank}`;
+            if (currentCard.linkval) line2 += ` / <b>링크:</b> ${currentCard.linkval}`;
+            if (currentCard.scale) line2 += ` / <b>스케일:</b> ${currentCard.scale}`;
+            hintStr += line2 + `<br>`;
+            let line3 = `<b>공격력:</b> ${currentCard.atk ?? "?"}`;
+            if (!isLink) line3 += ` / <b>수비력:</b> ${currentCard.def ?? "?"}`;
+            hintStr += line3;
+        }
+        area.innerHTML = hintStr;
+        document.getElementById('hint-btn').classList.add('hidden');
+    }
+
     async function loadCardData() {
         try {
             const response = await fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?language=ko');
@@ -139,90 +213,54 @@
     }
 
     async function startQuiz() {
-    // 1. 데이터 로딩 확인
-    if (allCards.length === 0) {
-        const btn = document.querySelector('#screen-main button');
-        const originalText = btn.innerText;
-        btn.innerText = "데이터 로딩 중...";
-        await loadCardData();
-        btn.innerText = "문제 풀기 (Enter)";
-    }
-    
-    // 2. 문항 수 설정
-    totalToPlay = parseInt(document.getElementById('quiz-count').value) || 20;
-
-    // 3. 카드 필터링 (Monster, Spell, Trap만 추출)
-    const filteredCards = allCards.filter(card => {
-        const isMonster = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
-        const isSpellOrTrap = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
-        return isMonster || isSpellOrTrap;
-    });
-
-    // --- 고품질 셔플 로직 시작 (Fisher-Yates + Web Crypto API) ---
-    const secureShuffle = (array) => {
-        const crypto = window.crypto || window.msCrypto;
-        const shuffled = [...array]; // 원본 배열 복사
-        
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            // 암호화 수준의 32비트 무부호 정수 생성
-            const randomBuffer = new Uint32Array(1);
-            crypto.getRandomValues(randomBuffer);
-            
-            // i+1 범위 내에서 편향 없는 인덱스 선택
-            const j = randomBuffer[0] % (i + 1);
-            
-            // 요소 맞바꾸기 (Destructuring assignment)
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        if (allCards.length === 0) {
+            const btn = document.querySelector('#screen-main button');
+            btn.innerText = "데이터 로딩 중...";
+            await loadCardData();
+            btn.innerText = "문제 풀기 (Enter)";
         }
-        return shuffled;
-    };
-    // --- 셔플 로직 끝 ---
-
-    // 4. 고품질로 섞인 카드 풀 생성
-    const shuffledPool = secureShuffle(filteredCards);
-    quizPool = shuffledPool.slice(0, totalToPlay);
-    
-    // 필터링된 카드가 요청 수보다 적을 경우 예외 처리
-    if (quizPool.length < totalToPlay) {
-        totalToPlay = quizPool.length;
+        totalToPlay = parseInt(document.getElementById('quiz-count').value) || 20;
+        const filtered = allCards.filter(card => {
+            const isM = card.typeline && (card.typeline.includes("Effect") || card.typeline.includes("Normal"));
+            const isST = card.type && (card.type.includes("Spell") || card.type.includes("Trap"));
+            return isM || isST;
+        });
+        const crypto = window.crypto || window.msCrypto;
+        quizPool = [...filtered].sort(() => {
+            const b = new Uint32Array(1); crypto.getRandomValues(b);
+            return (b[0] / 0xffffffff) - 0.5;
+        }).slice(0, totalToPlay);
+        currentIdx = 0; correctCount = 0; hintCorrectCount = 0; wrongCount = 0; userLogs = [];
+        showQuestion();
     }
-
-    // 5. 게임 상태 초기화
-    currentIdx = 0;
-    correctCount = 0;
-    wrongCount = 0;
-    userLogs = [];
-    
-    // 6. 이벤트 및 UI 세팅
-    const input = document.getElementById('user-input');
-    input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
-    
-    showQuestion();
-}
 
     function showQuestion() {
         scrollToTop();
+        usedHintThisTurn = false;
         currentCard = quizPool[currentIdx];
         document.getElementById('screen-main').classList.add('hidden');
         document.getElementById('screen-answer').classList.add('hidden');
         document.getElementById('screen-quiz').classList.remove('hidden');
-        if (debugMode === 1) {
-            const dbg = document.getElementById('debug-info');
-            dbg.classList.remove('hidden');
-            dbg.innerText = `[DEBUG] URL: https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(currentCard.name)}&language=ko`;
-        }
+        document.getElementById('hint-area').classList.add('hidden');
+        document.getElementById('hint-btn').classList.remove('hidden');
         updateStatusUI();
         let cleaned = cleanEffectText(currentCard.desc);
         document.getElementById('display-effect').innerHTML = cleaned.replace(/"[^"]*"/g, '"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"');
         document.getElementById('user-input').value = "";
         document.getElementById('user-input').focus();
+        const input = document.getElementById('user-input');
+        input.onkeypress = (e) => { if(e.keyCode === 13) checkAnswer(); };
     }
 
     function updateStatusUI() {
         document.getElementById('stat-correct').innerText = correctCount;
+        document.getElementById('stat-hint').innerText = hintCorrectCount;
         document.getElementById('stat-wrong').innerText = wrongCount;
         document.getElementById('stat-remain').innerText = totalToPlay - currentIdx;
+        
+        // 프로그레스 바 너비 계산
         document.getElementById('bar-correct').style.width = (correctCount/totalToPlay)*100 + "%";
+        document.getElementById('bar-hint').style.width = (hintCorrectCount/totalToPlay)*100 + "%";
         document.getElementById('bar-wrong').style.width = (wrongCount/totalToPlay)*100 + "%";
     }
 
@@ -230,26 +268,31 @@
         const userInput = document.getElementById('user-input').value;
         const normUser = normalizeName(userInput);
         const normTarget = normalizeName(currentCard.name);
-        
-        let isCorrect = false;
-        let matchedCard = currentCard; // 기본적으로 출제 카드를 보여줌
+        let isCorrect = false, matchedCard = currentCard;
 
         if (normUser === normTarget) {
             isCorrect = true;
         } else if (userInput.trim() !== "") {
             const userCard = allCards.find(c => normalizeName(c.name) === normUser);
             if (userCard && normalizeEffect(userCard.desc) === normalizeEffect(currentCard.desc)) {
-                isCorrect = true;
-                matchedCard = userCard; // 효과가 같으면 유저가 입력한 카드를 보여줌
+                if (usedHintThisTurn) {
+                    if (compareHintStats(currentCard, userCard)) { isCorrect = true; matchedCard = userCard; }
+                } else { isCorrect = true; matchedCard = userCard; }
             }
         }
 
-        if (isCorrect) correctCount++; else wrongCount++;
-        userLogs.push({ name: matchedCard.name, desc: matchedCard.desc, img: matchedCard.card_images[0].image_url, isCorrect, userAnswer: userInput || "(미입력)" });
-        showIndividualResult(isCorrect, userInput, matchedCard);
+        // 카운트 적용 (일반 정답 vs 힌트 정답 vs 오답)
+        if (isCorrect) {
+            if (usedHintThisTurn) hintCorrectCount++; else correctCount++;
+        } else {
+            wrongCount++;
+        }
+
+        userLogs.push({ name: matchedCard.name, desc: matchedCard.desc, img: matchedCard.card_images[0].image_url, isCorrect, isHintUsed: usedHintThisTurn, userAnswer: userInput || "(미입력)" });
+        showIndividualResult(isCorrect, usedHintThisTurn, userInput, matchedCard);
     }
 
-    function showIndividualResult(isCorrect, userInput, matchedCard) {
+    function showIndividualResult(isCorrect, isHintUsed, userInput, matchedCard) {
         scrollToTop();
         document.getElementById('screen-quiz').classList.add('hidden');
         document.getElementById('screen-answer').classList.remove('hidden');
@@ -258,8 +301,12 @@
         document.getElementById('user-typed-text').innerText = userInput || "(미입력)";
         document.getElementById('origin-effect').innerText = cleanEffectText(matchedCard.desc);
         const jEl = document.getElementById('judgment-text');
-        jEl.innerText = isCorrect ? "정답!" : "오답...";
-        jEl.className = `judgment ${isCorrect ? 'text-correct' : 'text-wrong'}`;
+        if (isCorrect) {
+            jEl.innerText = isHintUsed ? "정답! (힌트)" : "정답!";
+            jEl.className = `judgment ${isHintUsed ? 'text-hint' : 'text-correct'}`;
+        } else {
+            jEl.innerText = "오답..."; jEl.className = "judgment text-wrong";
+        }
         document.getElementById('next-btn').focus();
     }
 
@@ -273,20 +320,20 @@
         scrollToTop();
         document.getElementById('screen-answer').classList.add('hidden');
         document.getElementById('screen-final').classList.remove('hidden');
-        document.getElementById('final-score').innerText = `${totalToPlay} 중 ${correctCount} 성공 (${Math.round((correctCount/totalToPlay)*100)}%)`;
+        const totalWin = correctCount + hintCorrectCount;
+        document.getElementById('final-score').innerText = `${totalToPlay} 중 ${totalWin} 성공 (${Math.round((totalWin/totalToPlay)*100)}%)`;
         const content = document.getElementById('summary-content');
         content.innerHTML = "";
         userLogs.forEach((log, idx) => {
             const item = document.createElement('div');
             item.className = 'summary-item';
-            item.innerHTML = `<h4>[${idx+1}] ${log.name} (${log.isCorrect ? '<span class="text-correct">정답</span>' : '<span class="text-wrong">오답</span>'})</h4><div class="summary-typed">내가 쓴 답: <b>${log.userAnswer}</b></div><div class="effect-text" style="font-size:0.9rem; max-height:150px;">${cleanEffectText(log.desc)}</div>`;
+            let sText = log.isCorrect ? (log.isHintUsed ? '<span class="text-hint">정답(힌트)</span>' : '<span class="text-correct">정답</span>') : '<span class="text-wrong">오답</span>';
+            item.innerHTML = `<h4>[${idx+1}] ${log.name} (${sText})</h4><div class="summary-typed">내가 쓴 답: <b>${log.userAnswer}</b></div><div class="effect-text" style="font-size:0.9rem; max-height:150px;">${cleanEffectText(log.desc)}</div>`;
             content.appendChild(item);
         });
         document.querySelector('#screen-final button').focus();
     }
-
     window.onload = fetchLastUpdated;
 </script>
 </body>
 </html>
-
